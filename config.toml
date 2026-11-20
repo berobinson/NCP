@@ -1,0 +1,19 @@
+# Run settings. Command-line flags override anything here.
+
+[run]
+rubric = "rubrics/ncp12_food_feed.toml"   # which NCP rubric to screen against
+output_dir = "output"
+workers = 4                               # parallel API requests; lower it if you hit rate limits
+
+[claude]
+model = "claude-opus-5-5"                 # or "claude-sonnet-5-5" (cheaper)
+temperature = 0.0                         # 0 = most reproducible
+max_tokens = 1024
+
+[openai]
+model = "gpt-5.6"
+reasoning_effort = "medium"               # none | minimal | low | medium | high
+max_output_tokens = 4000                  # includes hidden reasoning tokens
+
+[site]
+repository = "berobinson/NCP"             # used for the "edit rubric" link when not on github.io

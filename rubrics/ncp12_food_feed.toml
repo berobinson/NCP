@@ -1,0 +1,80 @@
+# ---------------------------------------------------------------------------
+# Screening rubric: NCP 12, Food and feed
+#
+# This file is the screening protocol. Edit the text freely. Any change
+# produces a new "prompt version" code, which is written to every output row,
+# so each result can be traced to the exact rubric wording that produced it.
+#
+# To screen another NCP: copy this file (e.g. ncp11_energy.toml), edit it, and
+# point config.toml (or --rubric) at the new file.
+#
+# Keep the three criterion keys (A, B, C) and the yes/partly/no structure: the
+# decision rule in the code depends on them.
+#
+# TOML rule: plain "key = value" lines must stay ABOVE the first [section]
+# header. Anything written below a [section] belongs to that section.
+# ---------------------------------------------------------------------------
+
+ncp_number = 12
+ncp_name = "Food and feed"
+
+# Descriptive tags recorded for each paper (for evidence mapping, not for the decision).
+subject_categories = [
+    "crops", "livestock", "aquaculture", "capture_fisheries",
+    "wild_terrestrial_foods", "feed_fodder_rangeland", "not_applicable",
+]
+
+definition = """
+Production of food from wild, managed or domesticated organisms on land and in fresh and marine waters (e.g. crops, livestock, fish and other aquatic foods, bushmeat, wild edible plants, fungi, insects, honey), and production of feed and fodder for domesticated animals (e.g. rangeland and pasture forage, fodder crops, fishmeal). In the IPBES framework an NCP can be assessed as (a) the POTENTIAL of nature to supply it, (b) the REALISED supply actually obtained, and (c) its IMPACT on people's good quality of life (food security, nutrition, livelihoods, income, cultural foodways).
+"""
+
+purpose = """
+The assessment must characterise the GLOBAL STATUS AND TRENDS of this NCP and the drivers of change. You are selecting the papers that an assessment author must read. Be strict. A paper that merely mentions agriculture, fisheries, food security or livelihoods is NOT relevant. When in doubt between 1 and 2, choose 2. When in doubt between 2 and 0 because the paper is plainly about something else, choose 0.
+"""
+
+[criteria.A]
+name = "Food/feed from nature is a central subject"
+yes = "The production, supply, harvest, stock or productivity of food or feed from wild, managed or domesticated organisms (or people's dependence on / access to it) is a primary focus of the study."
+partly = "Food/feed supply is one of several co-equal foci (e.g. a multi-NCP or ecosystem-service bundle study that quantifies food/feed as one service)."
+no = "Food/feed is absent, secondary, background context, or mentioned only in passing."
+
+[criteria.B]
+name = "Provides evidence on status, trends, drivers or consequences of this NCP"
+yes = "Reports measured, remotely sensed or modelled evidence on the current status of food/feed supply or its ecological basis (e.g. yields, catch, fish stocks, wild-harvest volumes, rangeland productivity, agrobiodiversity underpinning production), on CHANGE OVER TIME, on DRIVERS of that change (land/sea-use change, climate change, overexploitation, pollution, invasive species, policy), on scenarios/projections, or on the resulting impacts on people (nutrition, food security, livelihoods dependent on nature)."
+partly = "Contains relevant data but status/trends/drivers are not its focus (e.g. a cross-sectional dependence survey, a valuation snapshot, land-cover change with only an implied link to food production)."
+no = "No such evidence (e.g. purely conceptual, method-only, governance/discourse analysis without outcome data, or a laboratory/experimental study of a mechanism)."
+
+[criteria.C]
+name = "Scope informative for a global assessment"
+yes = "Global, multi-regional, continental or multi-country scope; OR a national-scale analysis; OR a long time series (roughly 10 years or more) at any scale; OR a systematic review / meta-analysis / global synthesis; OR a dataset or indicator directly usable for global status-and-trends assessment."
+partly = "Subnational or landscape study with multi-year data; or a local study documenting trends from Indigenous and local knowledge (ILK) or in an under-represented region/system."
+no = "Single site or single season with no temporal dimension; small controlled trials; findings with no plausible bearing beyond the study site."
+
+# Exclusions: if any applies, the decision is 0. Codes must be unique, without spaces.
+[[exclusions]]
+code = "E1_lab_or_field_trial_agronomy"
+description = "crop/livestock/aquaculture breeding, genetics, fertiliser, feed-formulation, pest-control or management trials not linked to nature's contribution or status/trends."
+
+[[exclusions]]
+code = "E2_food_science_processing"
+description = "food chemistry, processing, packaging, safety, post-harvest, supply-chain logistics, food waste."
+
+[[exclusions]]
+code = "E3_nutrition_health_no_nature"
+description = "human nutrition, diet or health studies with no link to nature or ecosystems as the source of food."
+
+[[exclusions]]
+code = "E4_other_NCP_primary"
+description = "primarily about another NCP (pollination, soils, water, climate regulation, materials/energy, medicinal resources, etc.) without quantifying food/feed outcomes."
+
+[[exclusions]]
+code = "E5_passing_mention"
+description = "food/feed mentioned only as context, motivation or one of many listed services."
+
+[[exclusions]]
+code = "E6_non_research_item"
+description = "editorial, erratum, correction, commentary, book review, conference abstract without results."
+
+[[exclusions]]
+code = "E7_off_topic"
+description = "unrelated to food/feed and nature."

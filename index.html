@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NCP literature screening</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%2215%22 fill=%22%232f6b4f%22/%3E%3Cpath d=%22M9 17l5 5 9-11%22 stroke=%22white%22 stroke-width=%223.5%22 fill=%22none%22 stroke-linecap=%22round%22/%3E%3C/svg%3E">
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>NCP literature screening</h1>
+    <p class="sub">Dual-model title and abstract screening for the IPBES Second Global Assessment, chapter on Nature's Contributions to People</p>
+  </div>
+</header>
+
+<div id="demo-banner" class="banner" hidden>
+  Demo mode: no API calls are made and every answer is random. Remove <code>?demo=1</code> from the address to screen for real.
+</div>
+
+<main class="wrap">
+
+  <!-- 1. API keys ---------------------------------------------------------->
+  <section class="card" id="sec-keys">
+    <h2><span class="num">1</span> API keys</h2>
+    <p class="hint">Paste the lab keys you were given. They are sent only to Anthropic and OpenAI, directly from this browser, and are never stored in the repository.</p>
+    <div class="grid2">
+      <label>Anthropic (Claude) key
+        <input type="password" id="key-anthropic" autocomplete="off" placeholder="sk-ant-…">
+      </label>
+      <label>OpenAI key
+        <input type="password" id="key-openai" autocomplete="off" placeholder="sk-…">
+      </label>
+    </div>
+    <label class="check"><input type="checkbox" id="remember-keys"> Remember keys on this computer (leave this off on shared computers)</label>
+    <details>
+      <summary>Model settings</summary>
+      <div class="grid3">
+        <label>Claude model <input id="claude-model"></label>
+        <label>OpenAI model <input id="openai-model"></label>
+        <label>OpenAI reasoning effort
+          <select id="openai-effort">
+            <option>none</option><option>minimal</option><option>low</option>
+            <option>medium</option><option>high</option>
+          </select>
+        </label>
+        <label>Parallel requests per model <input id="workers" type="number" min="1" max="16"></label>
+      </div>
+      <button class="link" id="reset-settings" type="button">Reset to the lab defaults</button>
+    </details>
+  </section>
+
+  <!-- 2. Rubric ------------------------------------------------------------->
+  <section class="card" id="sec-rubric">
+    <h2><span class="num">2</span> Rubric</h2>
+    <label>NCP rubric <select id="rubric-select"></select></label>
+    <p id="rubric-meta" class="meta"></p>
+    <details>
+      <summary>Read the full prompt the models receive</summary>
+      <pre id="rubric-prompt"></pre>
+    </details>
+    <p class="hint">To change the rubric, edit its file in the <a id="rubric-edit-link" href="#" target="_blank" rel="noopener">repository</a>. The site updates about a minute after you save, and the change gets a new version code.</p>
+  </section>
+
+  <!-- 3. Records ------------------------------------------------------------>
+  <section class="card" id="sec-data">
+    <h2><span class="num">3</span> Records</h2>
+    <label class="file">OpenAlex export (.csv)
+      <input type="file" id="csv-file" accept=".csv,text/csv">
+    </label>
+    <p id="data-meta" class="meta"></p>
+    <div class="grid3">
+      <label>Screen
+        <select id="subset">
+          <option value="all">all records</option>
+          <option value="sample">a random sample</option>
+          <option value="first">the first N records</option>
+        </select>
+      </label>
+      <label id="n-wrap" hidden>N <input id="subset-n" type="number" min="1" value="100"></label>
+      <label id="seed-wrap" hidden>Random seed <input id="seed" type="number" value="42"></label>
+    </div>
+  </section>
+
+  <!-- 4. Run ---------------------------------------------------------------->
+  <section class="card" id="sec-run">
+    <h2><span class="num">4</span> Screen</h2>
+    <div class="row">
+      <label class="check"><input type="checkbox" id="use-claude" checked> Claude</label>
+      <label class="check"><input type="checkbox" id="use-openai" checked> OpenAI</label>
+    </div>
+    <div class="row">
+      <button id="btn-run" class="primary" type="button" disabled>Start screening</button>
+      <button id="btn-stop" type="button" disabled>Stop</button>
+      <span id="run-msg" class="meta"></span>
+    </div>
+    <div id="progress"></div>
+    <p class="hint">Keep this tab open while it runs. Progress is saved in this browser as it goes. If the tab closes, load the same file, choose the same rubric and press Start again: finished records are skipped.</p>
+  </section>
+
+  <!-- 5. Results ------------------------------------------------------------>
+  <section class="card" id="sec-results">
+    <h2><span class="num">5</span> Results</h2>
+    <div id="results-summary" class="meta">Results appear here once screening has started.</div>
+    <div class="row">
+      <button id="btn-dl-csv" type="button" disabled>Download results (.csv)</button>
+      <button id="btn-dl-report" type="button" disabled>Download agreement report (.txt)</button>
+      <button id="btn-dl-log" type="button" disabled>Download audit log (.jsonl)</button>
+    </div>
+    <details>
+      <summary>How the decisions and consensus are made</summary>
+      <div class="explain">
+        <p>Each model rates three criteria (yes, partly or no) and flags any exclusion code. The decision follows from those ratings: <b>1</b> if all three are "yes" and nothing is excluded; <b>0</b> if an exclusion applies or any criterion is "no"; <b>2</b> (uncertain) otherwise, or when the record has too little information.</p>
+        <p><b>Consensus</b>: a record is marked <i>include</i> or <i>exclude</i> only when both models give the same 0 or 1 and each decision matches that model's own ratings. Everything else is <i>human_review</i> and is listed first in the CSV, with empty <code>human_decision</code> and <code>human_notes</code> columns to fill in. With a single model, its consistent 0 and 1 decisions are used and every 2 goes to review.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Saved progress in this browser</summary>
+      <p class="hint">Results are kept per record, model and rubric version. Clearing them forces everything to be screened again.</p>
+      <button id="btn-clear" type="button">Clear all saved results</button>
+    </details>
+  </section>
+</main>
+
+<footer class="wrap">
+  <span id="footer-text"></span>
+</footer>
+
+<script src="assets/vendor/papaparse.min.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
