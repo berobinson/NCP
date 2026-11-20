@@ -6,33 +6,42 @@ import json
 
 from .rubric import Rubric
 
-TOOL_NAME = "record_screening_decision"
-
-
 def make_claude(rubric: Rubric, model: str, temperature: float | None = 0.0,
                 max_tokens: int = 1024):
     import anthropic
 
     client = anthropic.Anthropic(max_retries=8)  # retries 429/5xx with backoff
-    tool = {"name": TOOL_NAME,
-            "description": "Record the structured screening decision for one record.",
-            "input_schema": rubric.schema}
     # The rubric is identical for every call, so cache it (cheaper input tokens).
     system = [{"type": "text", "text": rubric.system_prompt,
                "cache_control": {"type": "ephemeral"}}]
+    use_temp = {"on": temperature is not None}
 
     def screen(user_message: str):
-        kwargs = dict(model=model, max_tokens=max_tokens, system=system, tools=[tool],
-                      tool_choice={"type": "tool", "name": TOOL_NAME},
+        kwargs = dict(model=model, max_tokens=max_tokens, system=system,
+                      output_config={"format": {"type": "json_schema",
+                                                "schema": rubric.schema}},
                       messages=[{"role": "user", "content": user_message}])
-        if temperature is not None:
+        if use_temp["on"]:
             kwargs["temperature"] = temperature
-        msg = client.messages.create(**kwargs)
-        block = next((b for b in msg.content if b.type == "tool_use"), None)
+        try:
+            msg = client.messages.create(**kwargs)
+        except anthropic.BadRequestError as e:
+            # Some newer models fix sampling settings; retry once without temperature.
+            if use_temp["on"] and "temperature" in str(e).lower():
+                use_temp["on"] = False
+                kwargs.pop("temperature")
+                msg = client.messages.create(**kwargs)
+            else:
+                raise
+        if msg.stop_reason == "refusal":
+            raise ValueError("model declined to answer (refusal)")
+        if msg.stop_reason == "max_tokens":
+            raise ValueError("answer cut off: raise max_tokens in config.toml")
+        block = next((b for b in msg.content if b.type == "text"), None)
         if block is None:
-            raise ValueError(f"no structured output (stop_reason={msg.stop_reason})")
+            raise ValueError(f"no output text (stop_reason={msg.stop_reason})")
         u = msg.usage
-        return dict(block.input), {
+        return json.loads(block.text), {
             "input": u.input_tokens, "output": u.output_tokens,
             "cache_read": getattr(u, "cache_read_input_tokens", 0) or 0,
             "cache_write": getattr(u, "cache_creation_input_tokens", 0) or 0}

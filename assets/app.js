@@ -12,7 +12,6 @@ const DEMO = new URLSearchParams(location.search).has('demo');
 const $ = (id) => document.getElementById(id);
 const PROVIDERS = ['claude', 'openai'];
 const LABEL = { claude: 'Claude', openai: 'OpenAI' };
-const TOOL_NAME = 'record_screening_decision';
 
 const state = {
   config: {},
@@ -325,27 +324,42 @@ async function postJson(url, headers, body) {
   }
 }
 
+const claudeNoTemperature = new Set();  // models that rejected `temperature` this session
+
 async function callClaude(rubric, s, key, userMessage) {
   const body = {
     model: s.claudeModel,
     max_tokens: s.claudeMaxTokens,
     system: [{ type: 'text', text: rubric.system_prompt, cache_control: { type: 'ephemeral' } }],
-    tools: [{ name: TOOL_NAME, description: 'Record the structured screening decision for one record.',
-              input_schema: rubric.schema }],
-    tool_choice: { type: 'tool', name: TOOL_NAME },
+    output_config: { format: { type: 'json_schema', schema: rubric.schema } },
     messages: [{ role: 'user', content: userMessage }],
   };
-  if (s.claudeTemperature !== null && s.claudeTemperature !== undefined) body.temperature = s.claudeTemperature;
-  const data = await postJson('https://api.anthropic.com/v1/messages', {
+  const useTemp = s.claudeTemperature !== null && s.claudeTemperature !== undefined
+    && !claudeNoTemperature.has(s.claudeModel);
+  if (useTemp) body.temperature = s.claudeTemperature;
+  const headers = {
     'content-type': 'application/json',
     'x-api-key': key,
     'anthropic-version': '2023-06-01',
     'anthropic-dangerous-direct-browser-access': 'true',
-  }, body);
-  const block = (data.content || []).find((b) => b.type === 'tool_use');
-  if (!block) throw new Error(`no structured output (stop_reason=${data.stop_reason})`);
+  };
+  let data;
+  try {
+    data = await postJson('https://api.anthropic.com/v1/messages', headers, body);
+  } catch (e) {
+    // Some newer models fix sampling settings; retry once without temperature.
+    if (useTemp && /temperature/i.test(e.message)) {
+      claudeNoTemperature.add(s.claudeModel);
+      delete body.temperature;
+      data = await postJson('https://api.anthropic.com/v1/messages', headers, body);
+    } else throw e;
+  }
+  if (data.stop_reason === 'refusal') throw new Error('model declined to answer (refusal)');
+  if (data.stop_reason === 'max_tokens') throw new Error('answer cut off: raise max_tokens in config.toml');
+  const block = (data.content || []).find((b) => b.type === 'text');
+  if (!block) throw new Error(`no output text (stop_reason=${data.stop_reason})`);
   const u = data.usage || {};
-  return { result: block.input, usage: { input: u.input_tokens || 0, output: u.output_tokens || 0,
+  return { result: JSON.parse(block.text), usage: { input: u.input_tokens || 0, output: u.output_tokens || 0,
     cache_read: u.cache_read_input_tokens || 0, cache_write: u.cache_creation_input_tokens || 0 } };
 }
 
